@@ -6,7 +6,7 @@ import tempfile
 
 import numpy as np
 
-from . import shared
+from eegtools.data import shared
 
 
 class NamedTemporaryDirectory:
@@ -65,7 +65,7 @@ def test_recording_construction():
 
 def test_cache_path(monkeypatch):
   with NamedTemporaryDirectory() as tmpdir:
-    monkeypatch.setenv(shared.CACHE_VAR) = tmpdir
+    monkeypatch.setenv(shared.CACHE_VAR, tmpdir)
 
     os.rmdir(tmpdir)  # make path non-existent
     assert shared.make_cache_path(shared.get_cache_path()) == tmpdir
