@@ -1,22 +1,22 @@
 import os
 import zipfile
 from io import BytesIO
-from six.moves import urllib
 
 import numpy as np
 from scipy import io
+from six.moves import urllib
 
 from .shared import Recording, data_source
+
 
 __all__ = ['load', 'subjects', 'sessions']
 
 sessions = 'aa al av aw ay'.split()
 subjects = sessions  # Legacy name, since sessions is more accurate.
 
-URL_TR = 'http://bbci.de/competition/download/'\
-  'competition_iii/berlin/100Hz/data_set_IVa_%s_mat.zip'
-URL_TE = 'http://bbci.de/competition/iii/results/berlin_IVa/'\
-  'true_labels_%s.mat'
+BASE_URL = 'http://bbci.de'
+URL_TRAIN = '{base_url}/competition/download/competition_iii/berlin/100Hz/data_set_IVa_{{subject}}_mat.zip'.format(base_url=BASE_URL)
+URL_TEST = '{base_url}/competition/iii/results/berlin_IVa/true_labels_{{subject}}.mat'.format(base_url=BASE_URL)
 
 
 LICENSE = '''Each participant has to agree to give reference to the group(s)
@@ -37,7 +37,15 @@ the feedback results will appear soon.
 
 
 def load_mat(mat_train, mat_test, rec_id):
-  '''Load BCI Comp. 3.4a specific Matlab files.'''
+  """
+  Load BCI Comp. 3.4a specific Matlab files.
+
+  :param str mat_train: The location of the training data
+  :param str mat_test: The location of the testing data
+  :param str rec_id: The recording id. Looks like 'bcicomp3.4a-{subject}'
+  :returns: The loaded recording
+  :rtype: Recording
+  """
   mat = io.loadmat(mat_train, struct_as_record=True)
   mat_true = io.loadmat(mat_test, struct_as_record=True)
 
@@ -68,19 +76,30 @@ def load_mat(mat_train, mat_test, rec_id):
 
 def load(subject, ds=data_source(), user='bci@mailinator.com',
          password='laichucaij'):
+  """
+  Public API for loading hte BCI competition data sets.
+
+  :param str subject: Which subject to laod
+  :param np.DataSource ds: The numpy data source from which to load the data.
+    Will download if not already downloaded. Defaults set in the shared.py file.
+  :param str user: The user name under which to load the data
+  :param str password: The password for loading the data
+  :returns: The loaded data for the relevant subject
+  :rtype: Recording
+  """
   # get HTTP authentication going
   password_mgr = urllib.request.HTTPPasswordMgrWithDefaultRealm()
-  password_mgr.add_password(None, 'http://bbci.de', user, password)
+  password_mgr.add_password(None, BASE_URL, user, password)
   handler = urllib.request.HTTPBasicAuthHandler(password_mgr)
   opener = urllib.request.build_opener(urllib2.HTTPHandler, handler)
   urllib.request.install_opener(opener)
 
   # Load the training set. We need to get a *seekable* file from a zip file.
   # So we wrap this in a BytesIO
-  tr = zipfile.ZipFile(ds.open(URL_TR % subject))
+  tr = zipfile.ZipFile(ds.open(URL_TRAIN.format(subject=subject)))
   tr_mat = BytesIO(tr.read('100Hz/data_set_IVa_{subject}.mat'.format(subject=subject)))
 
   # Load test labels that were made available after the competition.
-  te_mat = ds.open(URL_TE % subject)
+  te_mat = ds.open(URL_TEST.format(subjecdt=subject))
 
   return load_mat(tr_mat, te_mat, 'bcicomp3.4a-{subject}'.format(subject=subject))
