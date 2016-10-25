@@ -2,8 +2,8 @@
 Reader for EDF+ files.
 TODO:
  - add support for log-transformed channels:
-   http://www.edfplus.info/specs/edffloat.html and test with 
-   data generated with 
+   http://www.edfplus.info/specs/edffloat.html and test with
+   data generated with
    http://www.edfplus.info/downloads/software/NeuroLoopGain.zip.
  - check annotations with Schalk's Physiobank data.
 
@@ -34,7 +34,7 @@ def tal(tal_str):
 
   def parse(dic):
     return (
-      float(dic['onset']), 
+      float(dic['onset']),
       float(dic['duration']) if dic['duration'] else 0.,
       annotation_to_list(dic['annotation']))
 
@@ -53,7 +53,7 @@ def edf_header(f):
   # parse timestamp
   (day, month, year) = [int(x) for x in re.findall('(\d+)', f.read(8))]
   (hour, minute, sec)= [int(x) for x in re.findall('(\d+)', f.read(8))]
-  h['date_time'] = str(datetime.datetime(year + 2000, month, day, 
+  h['date_time'] = str(datetime.datetime(year + 2000, month, day,
     hour, minute, sec))
 
   # misc
@@ -77,9 +77,9 @@ def edf_header(f):
   h['prefiltering'] = [f.read(80).strip() for n in channels]
   h['n_samples_per_record'] = [int(f.read(8)) for n in channels]
   f.read(32 * nchannels)  # reserved
-  
+
   assert f.tell() == header_nbytes
-  return h 
+  return h
 
 
 class BaseEDFReader:
@@ -99,7 +99,7 @@ class BaseEDFReader:
     assert np.all(dig_range > 0)
     self.gain = phys_range / dig_range
 
-  
+
   def read_raw_record(self):
     '''Read a record with data and return a list containing arrays with raw
     bytes.
@@ -112,7 +112,7 @@ class BaseEDFReader:
       result.append(samples)
     return result
 
-    
+
   def convert_record(self, raw_record):
     '''Convert a raw record to a (time, signals, events) tuple based on
     information in the header.

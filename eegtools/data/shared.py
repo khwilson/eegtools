@@ -1,6 +1,9 @@
+from __future__ import division
+
 import os
 import textwrap
 import warnings
+
 import numpy as np
 
 '''
@@ -15,7 +18,7 @@ the data in a no-frills format.
 
 
 CACHE_VAR = 'EEGTOOLS_DATA_CACHE'
-CACHE_PATH = '~/eegtools_data'
+CACHE_PATH = os.path.expanduser(os.path.join('~', '.eegtools_data'))
 
 
 class Recording:
@@ -84,15 +87,14 @@ class Recording:
     p, n = self.X.shape
     assert len(self.chan_lab) == p
     assert self.dt.size == n - 1, \
-      'Temporal difference dt has shape %s, should be %s' % \
-        (self.dt.shape, (n - 1,))
-    
+      'Temporal difference dt has shape {}, should be {}'.format(self.dt.shape, (n-1,))
+
     # check for matching events
     event_ids = set(np.unique(self.events[0]))
     event_lab_ids = set(self.event_lab.keys())
     assert len(event_ids.difference(event_lab_ids)) == 0, \
-      'Unique events %s do not match events in event_lab %s!' % \
-        (list(event_ids), list(event_lab_ids))
+      'Unique events {} do not match events in event_lab {}!'.format(
+        list(event_ids), list(event_lab_ids))
 
     # check event conventions
     ids, starts, ends = events[0], events[1], events[2]
@@ -113,7 +115,7 @@ class Recording:
   @property
   def sample_rate(self):
     '''Estimate sample rate based on dt.'''
-    dt = self.dt 
+    dt = self.dt
     return 1./np.median(dt[np.isfinite(dt)])
 
 
@@ -122,13 +124,12 @@ class Recording:
     '''Return indices of starts of new continuous blocks'''
     return np.hstack([[0], 1 + np.flatnonzero(self.dt != 1./self.sample_rate)])
 
-  
   def __str__(self):
-    return ('Recording "%(rid)s" (%(p)d channels x %(n)d samples) '
-      'at %(fs).2f Hz in %(blocks)d continuous blocks, '
-      'with %(nevents)d events in %(nevent_types)d classes.') % \
-      dict(p=self.X.shape[0], n=self.X.shape[1], fs=self.sample_rate,
-        nevents=self.events.shape[1], nevent_types=len(self.event_lab), 
+    return ('Recording "{rid}" ({p} channels x {n} samples) '
+      'at {fs:0.2f} Hz in {blocks} continuous blocks, '
+      'with {nevents} events in {nevent_types} classes.').format(
+        p=self.X.shape[0], n=self.X.shape[1], fs=self.sample_rate,
+        nevents=self.events.shape[1], nevent_types=len(self.event_lab),
         blocks=self.continuous_starts.size, rid=self.rec_id)
 
 
@@ -137,12 +138,12 @@ def print_story(events, sample_rate):
   '''
   dic = dict(EVENTS)
   for (ei, start, end, optional) in events.T:
-    print '%s @ %.2fs (%.2fs long) -> %d.' % (
-      dic[ei].ljust(30), 
-      start / sample_rate, 
-      (end - start) / sample_rate, 
+    print('{:<30} @ {:0.2f}s ({:0.2f}s long) -> {}.'.format(
+      dic[ei],
+      start / sample_rate,
+      (end - start) / sample_rate,
       optional
-      )
+      ))
 
 
 def data_source():
@@ -157,7 +158,7 @@ def get_cache_path():
 
   Returns a string containing the path.
   '''
-  return os.environ.get(CACHE_VAR, os.path.expanduser(CACHE_PATH))
+  return os.environ.get(CACHE_VAR, CACHE_PATH)
 
 
 def make_cache_path(path):
@@ -179,12 +180,12 @@ def make_cache_path(path):
         datasets. It is safe to remove the cached files in this
         directory, but doing so will result in a performance penalty.
 
-        To change this path, set the %(env)s environment variable with
+        To change this path, set the {env} environment variable with
         the path of your preference. For example:
-        
-            $ export %(env)s=%(cache_path)s
+
+            $ export {env}={cache_path}
 
         That is all.
-        ''' % dict(env=CACHE_VAR, cache_path=CACHE_PATH)))
+        '''.format(env=CACHE_VAR, cache_path=CACHE_PATH)))
 
   return path

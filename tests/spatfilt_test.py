@@ -1,5 +1,9 @@
+from functools import reduce
+
 import numpy as np
-import spatfilt as sf
+
+from eegtools import spatfilt as sf
+
 
 def test_whitener():
   Sig = np.cov(np.random.rand(10, 100))
@@ -19,7 +23,6 @@ def test_select_channels():
   X = np.random.rand(10, 100)
   for keep in [[0, 1, -3, 2], (np.arange(10) % 2 == 0).astype(bool)]:
     W = sf.select_channels(X.shape[0], keep)
-    print W.shape
     np.testing.assert_equal(np.dot(W, X), X[keep])
 
 

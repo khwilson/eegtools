@@ -1,1 +1,1 @@
-from edfplus import load_edf
+from .edfplus import load_edf

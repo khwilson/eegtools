@@ -1,3 +1,7 @@
+from __future__ import division
+
+from functools import reduce
+
 import numpy as np
 
 
@@ -134,7 +138,7 @@ def outer_n(n):
   array([ 0,  1,  2, -3, -2, -1])
 
   '''
-  return np.roll(np.arange(n) - n/2, (n + 1) / 2)
+  return np.roll(np.arange(n) - n//2, (n + 1) // 2)
 
 
 def csp_base(C_a, C_b):

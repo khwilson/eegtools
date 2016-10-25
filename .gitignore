@@ -4,3 +4,5 @@ dist/*
 *.pyc
 *.*.swp
 .coverage
+.cache
+.tox

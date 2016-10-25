@@ -1,5 +1,6 @@
 from distutils.core import setup
 
+
 setup(
   name='eegtools',
   url='https://github.com/breuderink/eegtools',
@@ -7,7 +8,7 @@ setup(
   author_email='b.reuderink@gmail.com',
   license='New BSD',
   version='0.2.1',
-  # Needed for PIP, see http://stackoverflow.com/questions/8295644/:
-  install_requires=open('requirements.txt').readlines(),
+  install_requires=open('requirements.in').readlines(),
+  tests_require=open('requirements.testing.in').readlines(),
   packages=['eegtools', 'eegtools.io', 'eegtools.data'],
-  )
+)

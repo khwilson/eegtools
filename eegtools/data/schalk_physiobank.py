@@ -2,7 +2,7 @@
 import operator, re, logging, os.path
 import numpy as np
 import eegtools.io
-from shared import Recording, data_source
+from .shared import Recording, data_source
 
 __all__ = ['load', 'subjects', 'sessions']
 

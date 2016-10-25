@@ -1,10 +1,12 @@
-#!/usr/bin/env python
-# -*- coding: utf-8
-import os.path, urllib2, zipfile
-from StringIO import StringIO
+import os
+import zipfile
+from io import BytesIO
+from six.moves import urllib
+
 import numpy as np
 from scipy import io
-from shared import Recording, data_source
+
+from .shared import Recording, data_source
 
 __all__ = ['load', 'subjects', 'sessions']
 
@@ -59,26 +61,26 @@ def load_mat(mat_train, mat_test, rec_id):
 
   folds = np.where(np.isfinite(tr_y), -1, 1).tolist()
 
-  return Recording(X=X, dt=dt, chan_lab=chan_lab, 
+  return Recording(X=X, dt=dt, chan_lab=chan_lab,
     events=events, event_lab=event_lab, folds=folds,
     rec_id=rec_id, license=LICENSE)
 
 
-def load(subject, ds=data_source(), user='bci@mailinator.com', 
-  password='laichucaij'):
+def load(subject, ds=data_source(), user='bci@mailinator.com',
+         password='laichucaij'):
   # get HTTP authentication going
-  password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
+  password_mgr = urllib.request.HTTPPasswordMgrWithDefaultRealm()
   password_mgr.add_password(None, 'http://bbci.de', user, password)
-  handler = urllib2.HTTPBasicAuthHandler(password_mgr)
-  opener = urllib2.build_opener(urllib2.HTTPHandler, handler)
-  urllib2.install_opener(opener)
+  handler = urllib.request.HTTPBasicAuthHandler(password_mgr)
+  opener = urllib.request.build_opener(urllib2.HTTPHandler, handler)
+  urllib.request.install_opener(opener)
 
   # Load the training set. We need to get a *seekable* file from a zip file.
-  # Hence, StringIO is used.
+  # So we wrap this in a BytesIO
   tr = zipfile.ZipFile(ds.open(URL_TR % subject))
-  tr_mat = StringIO(tr.read('100Hz/data_set_IVa_%s.mat' % subject))  
+  tr_mat = BytesIO(tr.read('100Hz/data_set_IVa_{subject}.mat'.format(subject=subject)))
 
   # Load test labels that were made available after the competition.
   te_mat = ds.open(URL_TE % subject)
 
-  return load_mat(tr_mat, te_mat, 'bcicomp3.4a-%s' % subject)
+  return load_mat(tr_mat, te_mat, 'bcicomp3.4a-{subject}'.format(subject=subject))

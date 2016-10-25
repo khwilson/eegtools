@@ -2,7 +2,8 @@
 import argparse, os.path
 import numpy as np
 from scipy import io
-from shared import Recording, data_source
+
+from .shared import Recording, data_source
 
 __all__ = ['load', 'subjects', 'sessions']
 

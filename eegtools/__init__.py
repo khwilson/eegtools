@@ -1,4 +1,1 @@
-import io
-import data
-import featex
-import spatfilt
+from . import data, featex, io, spatfilt
