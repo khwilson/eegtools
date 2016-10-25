@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-import os.path
+import os
 import numpy as np
+
 from eegtools.io import edfplus
 
 
@@ -10,7 +11,7 @@ def test_with_generate_edf():
   is separately tested, *but not from a real file*!.
   '''
   reader = edfplus.BaseEDFReader(
-    open(os.path.join(os.path.dirname(__file__), 
+    open(os.path.join(os.path.dirname(__file__),
     'data', 'sine3Hz_block0.2Hz.edf'), 'rb'))
   reader.read_header()
 
@@ -24,9 +25,9 @@ def test_with_generate_edf():
 
   # get records
   recs = list(reader.records())
-  time = zip(*recs)[0]
-  signals = zip(*recs)[1]
-  annotations = list(zip(*recs)[2])
+  time = list(zip(*recs))[0]
+  signals = list(zip(*recs))[1]
+  annotations = list(list(zip(*recs))[2])
 
   # check EDF+ fields that are *not present in this file*
   np.testing.assert_equal(time, np.zeros(11) * np.nan)
@@ -43,30 +44,29 @@ def test_with_generate_edf():
 
 
 def test_edfplus_tal():
-  mult_annotations = '+180\x14Lights off\x14Close door\x14\x00'
-  with_duration = '+1800.2\x1525.5\x14Apnea\x14\x00'
-  test_unicode = '+180\x14€\x14\x00\x00'
-  int_time = '+1800\x1525\x14Apnea\x14\x00'
+  mult_annotations = b'+180\x14Lights off\x14Close door\x14\x00'
+  with_duration = b'+1800.2\x1525.5\x14Apnea\x14\x00'
+  with_unicode = b'+180\x14' + u'€'.encode('utf8') + b'\x14\x00\x00'
+  int_time = b'+1800\x1525\x14Apnea\x14\x00'
 
   # test annotation with duration
   assert edfplus.tal(with_duration) == [(1800.2, 25.5, [u'Apnea'])]
   assert edfplus.tal(int_time) == [(1800, 25, [u'Apnea'])]
 
   # test multiple annotations
-  assert edfplus.tal('\x00' * 4 + with_duration * 3) == \
+  assert edfplus.tal(b'\x00' * 4 + with_duration * 3) == \
     [(1800.2, 25.5, [u'Apnea'])] * 3
 
   # test multiple annotations for one time point
   assert edfplus.tal(mult_annotations) == \
     [(180., 0., [u'Lights off', u'Close door'])]
 
-  # test unicode support
-  assert edfplus.tal(test_unicode) == [(180., 0., [u'€'])]
+  assert edfplus.tal(with_unicode) == [(180., 0., [u'€'])]
 
 
 def test_load_edf():
   '''Test high-level edf-loading interface.'''
-  fname = os.path.join(os.path.dirname(__file__), 
+  fname = os.path.join(os.path.dirname(__file__),
     'data', 'kemp-positive_spikes.edf')
   X, sample_rate, sens_lab, time, annotations = edfplus.load_edf(fname)
   np.testing.assert_almost_equal(np.flatnonzero(X), np.arange(12) * 100)

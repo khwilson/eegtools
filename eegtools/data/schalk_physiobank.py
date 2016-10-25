@@ -40,11 +40,11 @@ EVENTS = [
   (2, 'baseline eyes closed'),
   (3, 'move left hand'),
   (4, 'move right hand'),
-  (5, 'imagine move left hand'), 
+  (5, 'imagine move left hand'),
   (6, 'imagine move right hand'),
-  (7, 'move left right hand'), 
+  (7, 'move left right hand'),
   (8, 'move feet'),
-  (9, 'imagine move left right hand'), 
+  (9, 'imagine move left right hand'),
   (10, 'imagine move feet'),
   ]
 
@@ -70,7 +70,7 @@ log = logging.getLogger(__name__)
 def gen_urls(subject, url_template=URL_TEMPLATE):
   '''Return EDF+ URLs for a given subject and template'''
   runs = np.arange(14) + 1
-  return [url_template % dict(subject=subject, run=run) 
+  return [url_template % dict(subject=subject, run=run)
     for run in runs], runs
 
 
@@ -141,13 +141,13 @@ def load(subject, ds=data_source(), url_template=URL_TEMPLATE):
   and resting task take about 4.15 +- .1 seconds.
 
   The file headers for one subject all contain the same start
-  timestamp, so we cannot estimate the time between runs. 
+  timestamp, so we cannot estimate the time between runs.
   '''
   urls, runs = gen_urls(subject, url_template)
   log.debug('Generated URLs: %s.' % (urls,))
-  
+
   # Load runs for this subject:
-  rec = [load_schalk_run(ds.open(u), r) for (u, r) in zip(urls, runs)]
+  rec = [load_schalk_run(ds.open(u, mode='rb'), r) for (u, r) in zip(urls, runs)]
   runs, events = zip(*rec)
 
   # Combine information from different runs:
@@ -159,6 +159,6 @@ def load(subject, ds=data_source(), url_template=URL_TEMPLATE):
   E = concatenate_events(events, [r.X.shape[1] for r in runs])
 
 
-  return Recording(X=X, dt=dt, chan_lab=chan_lab, events=E, folds=folds, 
-    event_lab=EVENTS, rec_id='schalk-physiobank-s%d' % subject, 
+  return Recording(X=X, dt=dt, chan_lab=chan_lab, events=E, folds=folds,
+    event_lab=EVENTS, rec_id='schalk-physiobank-s%d' % subject,
     license=LICENSE)

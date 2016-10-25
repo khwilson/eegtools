@@ -1,12 +1,32 @@
+from __future__ import division
+
+import os
+import shutil
+import tempfile
+
 import numpy as np
-import shared 
+
+from . import shared
+
+
+class NamedTemporaryDirectory:
+  def __init__(self):
+    self.tmpdir = tempfile.mkdtemp()
+
+  def __enter__(self):
+    return self.tmpdir
+
+  def __exit__(self, *args):
+    shutil.rmtree(self.tmpdir)
+
+
 def test_recording_construction():
   p, n = 32, 100
   X = np.zeros((p, n))
   chan_lab = ['chan%d' % c for c in range(p)]
 
   dt = np.ones(n-1) * .1
-  dt[[0, n/2]] = np.nan  # insert discontinuities
+  dt[[0, n//2]] = np.nan  # insert discontinuities
 
   events = [[0, 1, 2, 0],                  # event type
            [10, 20, 20, 50],               # start
@@ -16,11 +36,11 @@ def test_recording_construction():
   event_lab = {0 : 'zero', 1 : 'one', 2 : 'two'}
   folds = [0, 0, 1, 1]
 
-  r = shared.Recording(X=X, 
-    chan_lab=chan_lab, 
-    dt=dt, 
-    events=events, 
-    event_lab=event_lab, folds=folds, rec_id='test_rec', 
+  r = shared.Recording(X=X,
+    chan_lab=chan_lab,
+    dt=dt,
+    events=events,
+    event_lab=event_lab, folds=folds, rec_id='test_rec',
     license='test_license')
 
   # test storage
@@ -43,25 +63,16 @@ def test_recording_construction():
     '3 continuous blocks, with 4 events in 3 classes.' \
 
 
-def test_cache_path():
-  import os
-  import tempfile
-
-  # create new cache path
-  try:
-    tmpdir = tempfile.mkdtemp()
-    os.environ['EEGTOOLS_DATA_CACHE'] = tmpdir
+def test_cache_path(monkeypatch):
+  with NamedTemporaryDirectory() as tmpdir:
+    monkeypatch.setenv(shared.CACHE_VAR) = tmpdir
 
     os.rmdir(tmpdir)  # make path non-existent
     assert shared.make_cache_path(shared.get_cache_path()) == tmpdir
 
     readme_fname = os.path.join(shared.get_cache_path(), 'README.txt')
-    print readme_fname
     assert os.path.exists(readme_fname)
-  finally:
-    os.remove(os.path.join(tmpdir, 'README.txt')); 
-    os.rmdir(tmpdir)
 
   # test default cache path
-  del os.environ['EEGTOOLS_DATA_CACHE']
-  assert shared.get_cache_path() == os.path.expanduser('~/eegtools_data')
+  monkeypatch.delenv(shared.CACHE_VAR)
+  assert shared.get_cache_path() == shared.CACHE_PATH

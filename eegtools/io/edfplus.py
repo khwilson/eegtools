@@ -9,28 +9,33 @@ TODO:
 
 Copyright (c) 2012 Boris Reuderink.
 '''
-
-import re, datetime, operator, logging
-import numpy as np
+import datetime
+import logging
+import operator
+import re
 from collections import namedtuple
+from functools import reduce
+
+import numpy as np
+import six
 
 EVENT_CHANNEL = 'EDF Annotations'
 log = logging.getLogger(__name__)
 
-class EDFEndOfData: pass
+class EDFEndOfData(Exception): pass
 
 
 def tal(tal_str):
   '''Return a list with (onset, duration, annotation) tuples for an EDF+ TAL
   stream.
   '''
-  exp = '(?P<onset>[+\-]\d+(?:\.\d*)?)' + \
-    '(?:\x15(?P<duration>\d+(?:\.\d*)?))?' + \
-    '(\x14(?P<annotation>[^\x00]*))?' + \
-    '(?:\x14\x00)'
+  exp = b'(?P<onset>[+\-]\d+(?:\.\d*)?)' + \
+    b'(?:\x15(?P<duration>\d+(?:\.\d*)?))?' + \
+    b'(\x14(?P<annotation>[^\x00]*))?' + \
+    b'(?:\x14\x00)'
 
   def annotation_to_list(annotation):
-    return unicode(annotation, 'utf-8').split('\x14') if annotation else []
+    return [x.decode('utf8') for x in annotation.split(b'\x14')] if annotation else []
 
   def parse(dic):
     return (
@@ -44,38 +49,36 @@ def tal(tal_str):
 def edf_header(f):
   h = {}
   assert f.tell() == 0  # check file position
-  assert f.read(8) == '0       '
+  assert f.read(8) == b'0       '
 
   # recording info)
   h['local_subject_id'] = f.read(80).strip()
   h['local_recording_id'] = f.read(80).strip()
 
   # parse timestamp
-  (day, month, year) = [int(x) for x in re.findall('(\d+)', f.read(8))]
-  (hour, minute, sec)= [int(x) for x in re.findall('(\d+)', f.read(8))]
+  (day, month, year) = [int(x) for x in re.findall('(\d+)', f.read(8).decode('utf8'))]
+  (hour, minute, sec)= [int(x) for x in re.findall('(\d+)', f.read(8).decode('utf8'))]
   h['date_time'] = str(datetime.datetime(year + 2000, month, day,
     hour, minute, sec))
 
   # misc
-  header_nbytes = int(f.read(8))
-  subtype = f.read(44)[:5]
+  header_nbytes = int(f.read(8).decode('utf8'))
+  subtype = f.read(44)[:5].decode('utf8')
   h['EDF+'] = subtype in ['EDF+C', 'EDF+D']
   h['contiguous'] = subtype != 'EDF+D'
-  h['n_records'] = int(f.read(8))
-  h['record_length'] = float(f.read(8))  # in seconds
-  nchannels = h['n_channels'] = int(f.read(4))
+  h['n_records'] = int(f.read(8).decode('utf8'))
+  h['record_length'] = float(f.read(8).decode('utf8'))  # in seconds
+  nchannels = h['n_channels'] = int(f.read(4).decode('utf8'))
 
   # read channel info
   channels = range(h['n_channels'])
-  h['label'] = [f.read(16).strip() for n in channels]
-  h['transducer_type'] = [f.read(80).strip() for n in channels]
-  h['units'] = [f.read(8).strip() for n in channels]
-  h['physical_min'] = np.asarray([float(f.read(8)) for n in channels])
-  h['physical_max'] = np.asarray([float(f.read(8)) for n in channels])
-  h['digital_min'] = np.asarray([float(f.read(8)) for n in channels])
-  h['digital_max'] = np.asarray([float(f.read(8)) for n in channels])
-  h['prefiltering'] = [f.read(80).strip() for n in channels]
-  h['n_samples_per_record'] = [int(f.read(8)) for n in channels]
+  h['label'] = [f.read(16).decode('utf8').strip() for n in channels]
+  h['transducer_type'] = [f.read(80).decode('utf8').strip() for n in channels]
+  h['units'] = [f.read(8).decode('utf8').strip() for n in channels]
+  for key in ['physical_min', 'physical_max', 'digital_min', 'digital_max']:
+    h[key] = np.asarray([float(f.read(8).decode('utf8')) for n in channels])
+  h['prefiltering'] = [f.read(80).decode('utf8').strip() for n in channels]
+  h['n_samples_per_record'] = [int(f.read(8).decode('utf8')) for n in channels]
   f.read(32 * nchannels)  # reserved
 
   assert f.tell() == header_nbytes
@@ -184,7 +187,7 @@ def load_edf(edffile):
       description : list with strings
         Contains (multiple?) descriptions of the annotation event.
   '''
-  if isinstance(edffile, basestring):
+  if isinstance(edffile, six.string_types):
     with open(edffile, 'rb') as f:
       return load_edf(f)  # convert filename to file
 
@@ -201,7 +204,7 @@ def load_edf(edffile):
   assert nsamp.size == 1, 'Multiple sample rates not supported!'
   sample_rate = float(nsamp[0]) / h['record_length']
 
-  rectime, X, annotations = zip(*reader.records())
+  rectime, X, annotations = zip(*list(reader.records()))
   X = np.hstack(X)
   annotations = reduce(operator.add, annotations)
   chan_lab = [lab for lab in reader.header['label'] if lab != EVENT_CHANNEL]
